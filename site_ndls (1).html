@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards NL — 3e année</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #202026;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0efe8;
+    --muted: #7a7a8c;
+    --accent: #c8ff57;
+    --accent2: #57c8ff;
+    --accent3: #ff7c57;
+    --danger: #ff5757;
+    --success: #57ffb8;
+    --card-h: 220px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: .4;
+  }
+
+  .layout { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* HEADER */
+  header { margin-bottom: 2.5rem; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+  h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 5vw, 42px); line-height: 1.05; color: var(--text); }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .tagline { font-size: 13px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 2rem; background: var(--surface); padding: 4px; border-radius: 12px; width: fit-content; flex-wrap: wrap; }
+  .tab { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent); color: #0f0f11; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 1.5rem; }
+  select, .btn {
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text);
+    cursor: pointer; transition: all .2s;
+    outline: none;
+  }
+  select:hover, .btn:hover { border-color: rgba(255,255,255,0.25); }
+  .btn-accent { background: var(--accent); color: #0f0f11; border-color: var(--accent); font-weight: 500; }
+  .btn-accent:hover { background: #d8ff6e; }
+  .btn-ghost { background: transparent; }
+
+  /* STATS BAR */
+  .statsbar { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .stat-n { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; }
+  .stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-ok .stat-n { color: var(--success); }
+  .stat-wrong .stat-n { color: var(--danger); }
+  .stat-acc .stat-n { color: var(--accent); }
+
+  /* PROGRESS */
+  .progress-wrap { height: 3px; background: var(--surface2); border-radius: 99px; margin-bottom: 1.8rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+  /* FLASHCARD */
+  .card-arena { perspective: 1200px; margin-bottom: 1.2rem; cursor: pointer; user-select: none; }
+  .fc { width: 100%; height: var(--card-h); position: relative; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.4,0,.2,1); }
+  .fc.flipped { transform: rotateY(180deg); }
+  .fc-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem;
+    overflow: hidden;
+  }
+  .fc-face::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,255,87,.06), transparent 70%);
+    pointer-events: none;
+  }
+  .fc-back { transform: rotateY(180deg); }
+  .fc-back::before { background: radial-gradient(circle, rgba(87,200,255,.06), transparent 70%); }
+  .fc-lang {
+    position: absolute; top: 14px; left: 18px;
+    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
+  .fc-theme {
+    position: absolute; top: 12px; right: 14px;
+    font-size: 10px; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 3px 9px; border-radius: 99px;
+  }
+  .fc-word { font-family: 'Syne', sans-serif; font-size: clamp(18px, 3.5vw, 26px); font-weight: 700; text-align: center; color: var(--text); line-height: 1.25; }
+  .fc-hint { position: absolute; bottom: 14px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+  /* ANSWER BUTTONS */
+  .answer-btns { display: flex; gap: 12px; justify-content: center; margin-bottom: 2rem; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
+  .answer-btns.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .btn-wrong-a, .btn-ok-a {
+    flex: 1; max-width: 220px; padding: 13px 20px; border-radius: 10px;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.05em; cursor: pointer; border: 1px solid;
+    transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-wrong-a { background: rgba(255,87,87,.08); border-color: rgba(255,87,87,.3); color: var(--danger); }
+  .btn-wrong-a:hover { background: rgba(255,87,87,.18); }
+  .btn-ok-a { background: rgba(87,255,184,.08); border-color: rgba(87,255,184,.3); color: var(--success); }
+  .btn-ok-a:hover { background: rgba(87,255,184,.18); }
+
+  /* DONE SCREEN */
+  .done-screen { text-align: center; padding: 3rem 1rem; display: none; }
+  .done-score { font-family: 'Syne', sans-serif; font-size: 72px; font-weight: 800; line-height: 1; }
+  .done-label { font-size: 14px; color: var(--muted); margin-top: 6px; margin-bottom: 24px; }
+  .done-msg { font-size: 16px; color: var(--text); margin-bottom: 28px; }
+
+  /* ADD VOCAB PANEL */
+  .add-panel { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; }
+  .add-panel h2 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+  .add-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  .field label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+  .field input, .field select { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); outline: none; transition: border-color .2s; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .add-list { margin-top: 1.2rem; max-height: 200px; overflow-y: auto; }
+  .add-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; background: var(--surface2); margin-bottom: 6px; font-size: 13px; }
+  .add-item-words { display: flex; gap: 16px; }
+  .add-item-nl { font-weight: 500; color: var(--text); }
+  .add-item-fr { color: var(--muted); }
+  .add-item-tag { font-size: 10px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; border-radius: 99px; margin-left: 8px; }
+  .btn-del { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 2px 6px; opacity: .5; transition: opacity .2s; }
+  .btn-del:hover { opacity: 1; }
+  .no-custom { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  /* VOCAB LIST VIEW */
+  .vlist { display: none; }
+  .vlist.show { display: block; }
+  .vlist-theme { margin-bottom: 2rem; }
+  .vlist-theme-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .vlist-theme-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .vlist-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border); }
+  .vlist-row:first-of-type { border-top: 1px solid var(--border); }
+  .vlist-cell { padding: 9px 12px; font-size: 13px; }
+  .vlist-cell:first-child { color: var(--text); font-weight: 500; border-right: 1px solid var(--border); }
+  .vlist-cell:last-child { color: var(--muted); }
+  .vlist-row:hover .vlist-cell { background: var(--surface2); }
+
+  /* LOGIN MODAL */
+  .login-overlay {
+    display: flex; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 2.2rem 2rem; max-width: 360px; width: 90%;
+    text-align: center;
+  }
+  .login-box h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .login-box p { font-size: 12px; color: var(--muted); margin-bottom: 1.4rem; line-height: 1.6; }
+  .login-input {
+    width: 100%; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    padding: 11px 16px; border-radius: 10px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); outline: none;
+    text-align: center; letter-spacing: 0.08em; margin-bottom: 10px;
+    transition: border-color .2s;
+  }
+  .login-input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 11px; border-radius: 10px; border: none;
+    background: var(--accent); color: #0f0f11;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: background .2s;
+  }
+  .login-btn:hover { background: #d8ff6e; }
+  .login-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+
+  /* SYNC BAR */
+  .sync-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 1.5rem;
+    font-size: 12px;
+  }
+  .sync-user { color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; }
+  .sync-status { color: var(--muted); font-size: 11px; }
+  .sync-actions { display: flex; gap: 8px; }
+  .btn-sync { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); cursor: pointer; transition: all .2s; }
+  .btn-sync:hover { border-color: rgba(255,255,255,.25); }
+  .btn-logout { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,87,87,.3); background: transparent; color: var(--danger); cursor: pointer; transition: all .2s; }
+  .btn-logout:hover { background: rgba(255,87,87,.1); }
+
+  /* TOAST */
+  .import-toast {
+    display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--success); color: #0f0f11; font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 99px;
+    z-index: 200; white-space: nowrap; box-shadow: 0 4px 20px rgba(87,255,184,.3);
+  }
+  .toast-err { background: var(--danger) !important; box-shadow: 0 4px 20px rgba(255,87,87,.3) !important; color: #fff !important; }
+
+  /* KEYBOARD HINT */
+  .kb-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem; }
+  kbd { background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 6px; font-size: 10px; font-family: monospace; }
+
+  /* MOBILE */
+  @media (max-width: 560px) {
+    .statsbar { grid-template-columns: repeat(2,1fr); }
+    .add-grid { grid-template-columns: 1fr 1fr; }
+    .add-grid .field:nth-child(3), .add-grid .btn-accent { grid-column: span 2; }
+    .tabs { gap: 3px; }
+    .tab { font-size: 11px; padding: 6px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <header>
+    <div class="logo">Néerlandais · 3e année</div>
+    <h1>Flashcards<br><span>vocabulaire</span></h1>
+    <div class="tagline">Tous les thèmes de l'année · 130+ mots · entraînement infini</div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('flash')">Flashcards</button>
+    <button class="tab" onclick="setTab('list')">Liste voca</button>
+    <button class="tab" onclick="setTab('add')">+ Ajouter</button>
+  </div>
+
+  <!-- ═══ FLASHCARD TAB ═══ -->
+  <div id="tab-flash">
+    <div class="toolbar">
+      <select id="themeSelect" onchange="resetSession()">
+        <option value="all">Tous les thèmes</option>
+        <option value="winkelen">🛒 Winkelen</option>
+        <option value="uitstap">🗺️ Op uitstap</option>
+        <option value="reis">✈️ Op reis</option>
+        <option value="mobiliteit">🚲 Mobiliteit</option>
+        <option value="custom">⭐ Mes ajouts</option>
+      </select>
+      <select id="dirSelect" onchange="resetSession()">
+        <option value="nl-fr">NL → FR</option>
+        <option value="fr-nl">FR → NL</option>
+        <option value="random">Aléatoire</option>
+      </select>
+      <select id="modeSelect" onchange="resetSession()">
+        <option value="all">Toutes les cartes</option>
+        <option value="wrong">Erreurs seulement</option>
+      </select>
+      <button class="btn btn-accent" onclick="resetSession()">▶ Recommencer</button>
+    </div>
+
+    <div class="statsbar">
+      <div class="stat">
+        <div class="stat-n" id="s-total">0</div>
+        <div class="stat-l">Cartes</div>
+      </div>
+      <div class="stat stat-ok">
+        <div class="stat-n" id="s-ok">0</div>
+        <div class="stat-l">Correct</div>
+      </div>
+      <div class="stat stat-wrong">
+        <div class="stat-n" id="s-wrong">0</div>
+        <div class="stat-l">Erreurs</div>
+      </div>
+      <div class="stat stat-acc">
+        <div class="stat-n" id="s-pct">—</div>
+        <div class="stat-l">Score</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+
+    <div id="game-area">
+      <div class="card-arena" onclick="flipCard()" id="cardArena">
+        <div class="fc" id="fc">
+          <div class="fc-face fc-front">
+            <div class="fc-lang" id="frontLang">NL</div>
+            <div class="fc-theme" id="frontTheme"></div>
+            <div class="fc-word" id="frontWord">Appuie sur "Recommencer"</div>
+            <div class="fc-hint">⬡ cliquer pour retourner</div>
+          </div>
+          <div class="fc-face fc-back">
+            <div class="fc-lang" id="backLang">FR</div>
+            <div class="fc-theme" id="backTheme"></div>
+            <div class="fc-word" id="backWord"></div>
+          </div>
+        </div>
+      </div>
+      <div class="kb-hint"><kbd>espace</kbd> retourner &nbsp;·&nbsp; <kbd>←</kbd> erreur &nbsp;·&nbsp; <kbd>→</kbd> correct</div>
+      <div class="answer-btns" id="answerBtns">
+        <button class="btn-wrong-a" onclick="answer(false)">✕ &nbsp;Je ne savais pas</button>
+        <button class="btn-ok-a" onclick="answer(true)">✓ &nbsp;Je savais !</button>
+      </div>
+    </div>
+
+    <div class="done-screen" id="doneScreen">
+      <div class="done-score" id="doneScore" style="color:var(--accent)">—</div>
+      <div class="done-label">score final</div>
+      <div class="done-msg" id="doneMsg"></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-accent" onclick="resetSession()">↺ Rejouer</button>
+        <button class="btn" onclick="replayWrong()">✕ Réviser les erreurs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LIST TAB ═══ -->
+  <div id="tab-list" class="vlist">
+    <div id="vlist-container"></div>
+  </div>
+
+  <!-- ═══ ADD TAB ═══ -->
+  <div id="tab-add" style="display:none">
+    <!-- SYNC BAR -->
+    <div class="sync-bar" id="syncBar">
+      <div>
+        <div class="sync-user" id="syncUser"></div>
+        <div class="sync-status" id="syncStatus">—</div>
+      </div>
+      <div class="sync-actions">
+        <button class="btn-sync" onclick="syncPull()">⬇ Récupérer</button>
+        <button class="btn-sync" onclick="syncPush()">⬆ Sauvegarder</button>
+        <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+      </div>
+    </div>
+
+    <div class="add-panel">
+      <h2>Ajouter du vocabulaire</h2>
+      <div class="add-grid">
+        <div class="field">
+          <label>Néerlandais</label>
+          <input type="text" id="inp-nl" placeholder="het woord" onkeydown="if(event.key==='Enter')addWord()">
+        </div>
+        <div class="field">
+          <label>Français</label>
+          <input type="text" id="inp-fr" placeholder="le mot" onkeydown="if(event.key==='Enter')addWord()">
+        </div>
+        <div class="field">
+          <label>Thème</label>
+          <select id="inp-theme">
+            <option value="custom">Mes ajouts</option>
+            <option value="winkelen">Winkelen</option>
+            <option value="uitstap">Op uitstap</option>
+            <option value="reis">Op reis</option>
+            <option value="mobiliteit">Mobiliteit</option>
+          </select>
+        </div>
+        <button class="btn btn-accent" onclick="addWord()" style="height:40px;align-self:end">Ajouter</button>
+      </div>
+      <div id="add-error" style="font-size:12px;color:var(--danger);margin-top:8px;display:none">Remplis les deux champs !</div>
+      <div class="add-list" id="customList"></div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">
+      <strong style="color:var(--text)">Astuce :</strong> tes ajouts sont sauvegardés en ligne via ta clé d'accès.
+      Tu peux aussi exporter une version locale du site.
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-accent" onclick="exportSite()">⬇ Exporter le site</button>
+      <button class="btn btn-ghost" onclick="clearCustom()" style="color:var(--danger)">Supprimer tous mes ajouts</button>
+    </div>
+  </div>
+
+<!-- LOGIN MODAL -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div style="font-size:32px;margin-bottom:10px">🔑</div>
+    <h2>Clé d'accès</h2>
+    <p>Entre ta clé personnelle pour synchroniser<br>tes mots sur tous tes appareils.</p>
+    <input class="login-input" id="loginKey" type="text" placeholder="ta-clé-perso" maxlength="40"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Accéder →</button>
+    <div class="login-error" id="loginError">Connexion impossible, réessaie.</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="import-toast" id="importToast"></div>
+
+</div><!-- /layout -->
+
+<script>
+const THEMES = {
+  winkelen: '🛒 Winkelen',
+  uitstap: '🗺️ Op uitstap',
+  reis: '✈️ Op reis',
+  mobiliteit: '🚲 Mobiliteit',
+  custom: '⭐ Mes ajouts'
+};
+
+const BASE_VOCAB = [
+  // ── WINKELEN ──
+  {nl:"de boodschappen",fr:"les courses",t:"winkelen"},
+  {nl:"de boodschappenlijst",fr:"la liste de courses",t:"winkelen"},
+  {nl:"de kassa",fr:"la caisse",t:"winkelen"},
+  {nl:"de bankkaart",fr:"la carte bancaire",t:"winkelen"},
+  {nl:"de kortingsbon",fr:"le bon de réduction",t:"winkelen"},
+  {nl:"het kasticket",fr:"le ticket de caisse",t:"winkelen"},
+  {nl:"het ingrediënt",fr:"l'ingrédient",t:"winkelen"},
+  {nl:"het recept",fr:"la recette",t:"winkelen"},
+  {nl:"de korting",fr:"la réduction",t:"winkelen"},
+  {nl:"in reclame",fr:"en promotion",t:"winkelen"},
+  {nl:"de fles",fr:"la bouteille",t:"winkelen"},
+  {nl:"het pak",fr:"le paquet",t:"winkelen"},
+  {nl:"de zak",fr:"le sachet",t:"winkelen"},
+  {nl:"het blik / het conservenblik",fr:"la boîte de conserve",t:"winkelen"},
+  {nl:"de doos melk / het karton melk",fr:"la boîte de lait / le carton de lait",t:"winkelen"},
+  {nl:"één gram / tien gram",fr:"1 gramme / 10 grammes",t:"winkelen"},
+  {nl:"één kilo / tien kilo",fr:"1 kilo / 10 kilos",t:"winkelen"},
+  {nl:"een halve kilo",fr:"un demi-kilo",t:"winkelen"},
+  {nl:"anderhalve kilo",fr:"un kilo et demi",t:"winkelen"},
+  {nl:"één liter / tien liter",fr:"1 litre / 10 litres",t:"winkelen"},
+  {nl:"één sneetje / tien sneetjes",fr:"une tranche / dix tranches",t:"winkelen"},
+  {nl:"de slager",fr:"le boucher / la bouchère",t:"winkelen"},
+  {nl:"de kruidenier",fr:"l'épicier / l'épicière",t:"winkelen"},
+  {nl:"de bakker",fr:"le boulanger / la boulangère",t:"winkelen"},
+  {nl:"de verkoper / de verkoopster",fr:"le vendeur / la vendeuse",t:"winkelen"},
+  {nl:"de kassier / de kassierster",fr:"le caissier / la caissière",t:"winkelen"},
+  {nl:"de slagerij",fr:"la boucherie",t:"winkelen"},
+  {nl:"de bakkerij",fr:"la boulangerie",t:"winkelen"},
+  {nl:"de kruidenierswinkel",fr:"l'épicerie",t:"winkelen"},
+  {nl:"de supermarkt",fr:"le supermarché",t:"winkelen"},
+  {nl:"de schoenenwinkel",fr:"le magasin de chaussures",t:"winkelen"},
+  {nl:"de klerenwinkel",fr:"le magasin de vêtements",t:"winkelen"},
+  {nl:"kopen",fr:"acheter",t:"winkelen"},
+  {nl:"koken",fr:"cuisiner",t:"winkelen"},
+  {nl:"klaarmaken",fr:"préparer",t:"winkelen"},
+  {nl:"betalen",fr:"payer",t:"winkelen"},
+  {nl:"contant betalen",fr:"payer en cash",t:"winkelen"},
+  {nl:"met de kaart betalen",fr:"payer par carte",t:"winkelen"},
+  {nl:"de code ingeven / intikken",fr:"taper le code",t:"winkelen"},
+  {nl:"geraspt",fr:"râpé(e)",t:"winkelen"},
+  {nl:"gesneden",fr:"coupé(e)",t:"winkelen"},
+  {nl:"goedkoop",fr:"bon marché",t:"winkelen"},
+  {nl:"duur",fr:"cher / chère",t:"winkelen"},
+  {nl:"de paskamer(s)",fr:"la / les cabine(s) d'essayage",t:"winkelen"},
+  {nl:"de maat",fr:"la taille",t:"winkelen"},
+  {nl:"de kleur",fr:"la couleur",t:"winkelen"},
+  {nl:"te groot ↔ te klein",fr:"trop grand ↔ trop petit",t:"winkelen"},
+  {nl:"te lang ↔ te kort",fr:"trop long ↔ trop court",t:"winkelen"},
+  {nl:"te breed ↔ te smal",fr:"trop large ↔ trop étroit",t:"winkelen"},
+  {nl:"de ronde kraag",fr:"le col rond",t:"winkelen"},
+  {nl:"de V-hals",fr:"le col en V",t:"winkelen"},
+  {nl:"de lange / korte mouwen",fr:"les manches longues / courtes",t:"winkelen"},
+  {nl:"Wie kan ik helpen?",fr:"Qui puis-je aider ?",t:"winkelen"},
+  {nl:"Ik denk dat wij aan de beurt zijn.",fr:"Je pense que c'est notre tour.",t:"winkelen"},
+  {nl:"We hadden graag ...",fr:"Nous voudrions / Nous aimerions ...",t:"winkelen"},
+  {nl:"Is dat alles? / Inderdaad.",fr:"C'est tout ? / En effet.",t:"winkelen"},
+  {nl:"Geeft u misschien korting?",fr:"Est-ce que vous faites une réduction ?",t:"winkelen"},
+  {nl:"Netjes gepast.",fr:"Compte exact.",t:"winkelen"},
+  // ── OP UITSTAP ──
+  {nl:"de straat / de laan",fr:"la rue / l'avenue",t:"uitstap"},
+  {nl:"het kruispunt",fr:"le carrefour",t:"uitstap"},
+  {nl:"de verkeerslichten",fr:"les feux de signalisation",t:"uitstap"},
+  {nl:"de rotonde / het rondpunt",fr:"le rond-point",t:"uitstap"},
+  {nl:"het zebrapad",fr:"le passage piéton",t:"uitstap"},
+  {nl:"de brug",fr:"le pont",t:"uitstap"},
+  {nl:"het plein",fr:"la place",t:"uitstap"},
+  {nl:"de richting",fr:"la direction",t:"uitstap"},
+  {nl:"de stoep / het trottoir",fr:"le trottoir",t:"uitstap"},
+  {nl:"rechtdoor",fr:"tout droit",t:"uitstap"},
+  {nl:"rechts",fr:"à droite",t:"uitstap"},
+  {nl:"links",fr:"à gauche",t:"uitstap"},
+  {nl:"tot (aan)",fr:"jusqu'à / au",t:"uitstap"},
+  {nl:"aan de rechterkant / linkerkant",fr:"sur la droite / gauche",t:"uitstap"},
+  {nl:"tegenover",fr:"en face de",t:"uitstap"},
+  {nl:"naast / dichtbij",fr:"à côté / près de",t:"uitstap"},
+  {nl:"op de hoek van",fr:"au coin de",t:"uitstap"},
+  {nl:"op het einde van de straat",fr:"au bout de la rue",t:"uitstap"},
+  {nl:"(niet) ver van",fr:"(pas) loin de",t:"uitstap"},
+  {nl:"de bibliotheek",fr:"la bibliothèque",t:"uitstap"},
+  {nl:"de kerk",fr:"l'église",t:"uitstap"},
+  {nl:"het postkantoor",fr:"la poste",t:"uitstap"},
+  {nl:"de toeristische dienst",fr:"l'office du tourisme",t:"uitstap"},
+  {nl:"het stadhuis",fr:"l'hôtel de ville",t:"uitstap"},
+  {nl:"het station",fr:"la gare",t:"uitstap"},
+  {nl:"het museum",fr:"le musée",t:"uitstap"},
+  {nl:"het cultureel centrum",fr:"le centre culturel",t:"uitstap"},
+  {nl:"het commercieel centrum",fr:"le centre commercial",t:"uitstap"},
+  {nl:"het ziekenhuis",fr:"l'hôpital",t:"uitstap"},
+  {nl:"de sporthal",fr:"le hall sportif",t:"uitstap"},
+  {nl:"het theater",fr:"le théâtre",t:"uitstap"},
+  {nl:"de vishandel",fr:"la poissonnerie",t:"uitstap"},
+  {nl:"aankomen",fr:"arriver",t:"uitstap"},
+  {nl:"zich bevinden",fr:"se trouver",t:"uitstap"},
+  {nl:"oversteken",fr:"traverser",t:"uitstap"},
+  {nl:"verdergaan",fr:"continuer",t:"uitstap"},
+  {nl:"volgen",fr:"suivre",t:"uitstap"},
+  {nl:"afslaan",fr:"tourner",t:"uitstap"},
+  {nl:"voorbijgaan",fr:"passer devant",t:"uitstap"},
+  {nl:"Excuseer, waar is ... a.u.b.?",fr:"Excusez-moi, où est ... s.v.p. ?",t:"uitstap"},
+  {nl:"Kunt u me de weg wijzen?",fr:"Pouvez-vous m'indiquer le chemin ?",t:"uitstap"},
+  {nl:"Sorry, ik ben niet van hier.",fr:"Désolé, je ne suis pas d'ici.",t:"uitstap"},
+  {nl:"U bent er!",fr:"Vous y êtes !",t:"uitstap"},
+  {nl:"Graag gedaan! / Zonder dank!",fr:"De rien !",t:"uitstap"},
+  {nl:"Kan ik u helpen?",fr:"Puis-je vous aider ?",t:"uitstap"},
+  {nl:"We zouden graag ... bezoeken.",fr:"Nous aimerions visiter ...",t:"uitstap"},
+  {nl:"Welke musea raadt u ons aan?",fr:"Quels musées nous conseillez-vous ?",t:"uitstap"},
+  {nl:"Hoeveel kost een ticket?",fr:"Combien coûte un ticket ?",t:"uitstap"},
+  {nl:"Tot hoe laat is het museum open?",fr:"Jusqu'à quelle heure est ouvert le musée ?",t:"uitstap"},
+  {nl:"Waar is het toilet, alstublieft?",fr:"Où sont les toilettes, s.v.p. ?",t:"uitstap"},
+  {nl:"Het is gratis voor klasgroepen.",fr:"C'est gratuit pour les groupes-classes.",t:"uitstap"},
+  // ── OP REIS ──
+  {nl:"het vervoermiddel",fr:"le moyen de transport",t:"reis"},
+  {nl:"het openbaar vervoer",fr:"les transports en commun",t:"reis"},
+  {nl:"het vliegtuig",fr:"l'avion",t:"reis"},
+  {nl:"de fiets",fr:"le vélo",t:"reis"},
+  {nl:"de bromfiets / de scooter",fr:"le vélomoteur / le scooter",t:"reis"},
+  {nl:"het spoorabonnement",fr:"l'abonnement de train",t:"reis"},
+  {nl:"de aankomst",fr:"l'arrivée",t:"reis"},
+  {nl:"de vertraging",fr:"le retard / le délai",t:"reis"},
+  {nl:"de bushalte",fr:"l'arrêt de bus",t:"reis"},
+  {nl:"het vertrek",fr:"le départ",t:"reis"},
+  {nl:"het spoor",fr:"la voie",t:"reis"},
+  {nl:"de jeugdherberg",fr:"l'auberge de jeunesse",t:"reis"},
+  {nl:"de camping",fr:"le camping",t:"reis"},
+  {nl:"de sanitaire voorzieningen",fr:"les sanitaires",t:"reis"},
+  {nl:"de brochure",fr:"la brochure",t:"reis"},
+  {nl:"de inlichtingen",fr:"les renseignements",t:"reis"},
+  {nl:"het groepstarief",fr:"le tarif de groupe",t:"reis"},
+  {nl:"vrij / beschikbaar",fr:"libre / disponible",t:"reis"},
+  {nl:"bezoeken",fr:"visiter",t:"reis"},
+  {nl:"aanraden",fr:"conseiller",t:"reis"},
+  {nl:"overnachten / logeren",fr:"dormir / loger",t:"reis"},
+  {nl:"een week doorbrengen",fr:"passer une semaine",t:"reis"},
+  {nl:"vertrekken",fr:"partir",t:"reis"},
+  {nl:"huren",fr:"louer",t:"reis"},
+  {nl:"reizen",fr:"voyager",t:"reis"},
+  {nl:"sparen",fr:"épargner",t:"reis"},
+  {nl:"zich verplaatsen",fr:"se déplacer",t:"reis"},
+  {nl:"Kan ik wat inlichtingen krijgen?",fr:"Puis-je avoir des renseignements ?",t:"reis"},
+  {nl:"Ik zou graag ... doorbrengen.",fr:"J'aimerais passer ...",t:"reis"},
+  {nl:"Is er een groepstarief?",fr:"Y a-t-il un tarif de groupe ?",t:"reis"},
+  {nl:"Hoe komen jullie naar ...?",fr:"Comment venez-vous à ... ?",t:"reis"},
+  {nl:"Ze zijn allemaal gratis.",fr:"Elles sont toutes gratuites.",t:"reis"},
+  // ── MOBILITEIT ──
+  {nl:"het verkeer",fr:"la circulation",t:"mobiliteit"},
+  {nl:"de file",fr:"l'embouteillage",t:"mobiliteit"},
+  {nl:"in de file staan",fr:"être dans les embouteillages",t:"mobiliteit"},
+  {nl:"pendelen",fr:"faire la navette",t:"mobiliteit"},
+  {nl:"meerijden",fr:"covoiturer",t:"mobiliteit"},
+  {nl:"de verplaatsing",fr:"le déplacement",t:"mobiliteit"},
+  {nl:"de oplossing",fr:"la solution",t:"mobiliteit"},
+  {nl:"drukke straten vermijden",fr:"éviter les rues fréquentées",t:"mobiliteit"},
+  {nl:"in de buurt van",fr:"près de / dans les environs de",t:"mobiliteit"},
+  {nl:"overal",fr:"partout",t:"mobiliteit"},
+  {nl:"geraken",fr:"arriver / parvenir à",t:"mobiliteit"},
+  {nl:"verdragen",fr:"supporter / tolérer",t:"mobiliteit"},
+  {nl:"gevaarlijk",fr:"dangereux / dangereuse",t:"mobiliteit"},
+  {nl:"voorzichtig ↔ onvoorzichtig",fr:"prudent ↔ imprudent",t:"mobiliteit"},
+  {nl:"de helm",fr:"le casque",t:"mobiliteit"},
+  {nl:"de bebouwde kom",fr:"l'agglomération",t:"mobiliteit"},
+  {nl:"de bestuurder",fr:"le conducteur",t:"mobiliteit"},
+  {nl:"het rijbewijs",fr:"le permis de conduire",t:"mobiliteit"},
+  {nl:"de toegelaten snelheid",fr:"la vitesse autorisée",t:"mobiliteit"},
+  {nl:"de reflecterende strips",fr:"les bandes réfléchissantes",t:"mobiliteit"},
+  {nl:"de fietsenstalling",fr:"le garage à vélos",t:"mobiliteit"},
+  {nl:"de boete",fr:"l'amende",t:"mobiliteit"},
+  {nl:"de verkeersopleiding",fr:"la formation routière",t:"mobiliteit"},
+  {nl:"de (mede)reiziger",fr:"le voyageur / le passager",t:"mobiliteit"},
+  {nl:"de bestemming",fr:"la destination",t:"mobiliteit"},
+  {nl:"de dienstregeling",fr:"l'horaire",t:"mobiliteit"},
+  {nl:"de laad- en loszone",fr:"la zone de (dé)chargement",t:"mobiliteit"},
+  {nl:"de zwakke weggebruiker",fr:"l'usager faible",t:"mobiliteit"},
+  {nl:"de verkeersveiligheidscampagne",fr:"la campagne de sécurité routière",t:"mobiliteit"},
+  {nl:"de veiligheidsgordel vastklikken",fr:"boucler la ceinture de sécurité",t:"mobiliteit"},
+  {nl:"de veiligheidsgordel dragen",fr:"porter la ceinture de sécurité",t:"mobiliteit"},
+  {nl:"iemand voorrang geven",fr:"donner la priorité à quelqu'un",t:"mobiliteit"},
+  {nl:"de arm uitsteken",fr:"tendre le bras",t:"mobiliteit"},
+  {nl:"van richting veranderen",fr:"changer de direction",t:"mobiliteit"},
+  {nl:"iemand overrijden",fr:"écraser quelqu'un",t:"mobiliteit"},
+  {nl:"iemand ophalen",fr:"aller chercher quelqu'un",t:"mobiliteit"},
+  {nl:"iemand afzetten",fr:"déposer quelqu'un",t:"mobiliteit"},
+  {nl:"afstand houden",fr:"garder ses distances",t:"mobiliteit"},
+  {nl:"vertraging hebben",fr:"avoir du retard",t:"mobiliteit"},
+  {nl:"laden",fr:"charger",t:"mobiliteit"},
+  {nl:"lossen",fr:"décharger / déposer",t:"mobiliteit"},
+  {nl:"enerzijds ... anderzijds ...",fr:"d'une part ... d'autre part ...",t:"mobiliteit"},
+  {nl:"Ik draag altijd een fietshelm.",fr:"Je porte toujours un casque de vélo.",t:"mobiliteit"},
+  {nl:"In de file staan is vervelend.",fr:"Être dans les embouteillages est ennuyeux.",t:"mobiliteit"},
+];
+
+// ── STATE ──
+let customVocab = JSON.parse(localStorage.getItem('nl_custom') || '[]');
+let wrongCards = [];
+let deck = [];
+let current = 0;
+let okCount = 0;
+let wrongCount = 0;
+let isFlipped = false;
+let sessionDir = 'nl-fr';
+
+function allVocab() { return [...BASE_VOCAB, ...customVocab]; }
+
+function saveCustom() {
+  localStorage.setItem('nl_custom', JSON.stringify(customVocab));
+  if (currentBinId) syncPush();
+}
+
+// ── TAB SWITCHING ──
+function setTab(name) {
+  ['flash','list','add'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = t === name ? 'block' : 'none';
+    if (t === 'list') el.classList.toggle('show', t === name);
+  });
+  document.querySelectorAll('.tab').forEach((b,i) => {
+    b.classList.toggle('active', ['flash','list','add'][i] === name);
+  });
+  if (name === 'list') renderList();
+  if (name === 'add') renderCustomList();
+}
+
+// ── SESSION ──
+function getDeck() {
+  const theme = document.getElementById('themeSelect').value;
+  const mode = document.getElementById('modeSelect').value;
+  let pool = allVocab();
+  if (theme !== 'all') pool = pool.filter(v => v.t === theme);
+  if (mode === 'wrong' && wrongCards.length > 0) pool = wrongCards;
+  return shuffle([...pool]);
+}
+
+function resetSession() {
+  wrongCards = [];
+  okCount = 0; wrongCount = 0; current = 0; isFlipped = false;
+  deck = getDeck();
+  sessionDir = document.getElementById('dirSelect').value;
+  document.getElementById('doneScreen').style.display = 'none';
+  document.getElementById('game-area').style.display = 'block';
+  document.getElementById('answerBtns').classList.remove('show');
+  document.getElementById('fc').classList.remove('flipped');
+  updateStats();
+  showCard();
+}
+
+function showCard() {
+  if (current >= deck.length) { showDone(); return; }
+  isFlipped = false;
+  document.getElementById('fc').classList.remove('flipped');
+  document.getElementById('answerBtns').classList.remove('show');
+  const card = deck[current];
+  const dir = sessionDir === 'random' ? (Math.random() < .5 ? 'nl-fr' : 'fr-nl') : sessionDir;
+  const front = dir === 'nl-fr' ? card.nl : card.fr;
+  const back  = dir === 'nl-fr' ? card.fr : card.nl;
+  document.getElementById('frontLang').textContent = dir === 'nl-fr' ? 'NL' : 'FR';
+  document.getElementById('backLang').textContent  = dir === 'nl-fr' ? 'FR' : 'NL';
+  document.getElementById('frontWord').textContent = front;
+  document.getElementById('backWord').textContent  = back;
+  const tl = THEMES[card.t] || card.t;
+  document.getElementById('frontTheme').textContent = tl;
+  document.getElementById('backTheme').textContent  = tl;
+  updateProgress();
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  document.getElementById('fc').classList.add('flipped');
+  setTimeout(() => document.getElementById('answerBtns').classList.add('show'), 200);
+}
+
+function answer(ok) {
+  if (ok) okCount++;
+  else { wrongCount++; wrongCards.push(deck[current]); }
+  current++;
+  updateStats();
+
+  // 1) Cacher les boutons et désactiver le clic sur la carte
+  const btns = document.getElementById('answerBtns');
+  const arena = document.getElementById('cardArena');
+  btns.classList.remove('show');
+  arena.style.pointerEvents = 'none';
+
+  // 2) Retourner la carte vers le recto
+  const fc = document.getElementById('fc');
+  fc.classList.remove('flipped');
+  isFlipped = false;
+
+  // 3) Attendre la fin de l'animation (500ms = durée de la transition CSS)
+  //    puis mettre à jour le contenu et réactiver les interactions
+  setTimeout(() => {
+    arena.style.pointerEvents = '';
+    showCard();
+  }, 520);
+}
+
+function replayWrong() {
+  if (!wrongCards.length) return;
+  document.getElementById('modeSelect').value = 'wrong';
+  deck = shuffle([...wrongCards]);
+  wrongCards = []; okCount = 0; wrongCount = 0; current = 0; isFlipped = false;
+  document.getElementById('doneScreen').style.display = 'none';
+  document.getElementById('game-area').style.display = 'block';
+  updateStats(); showCard();
+}
+
+function showDone() {
+  document.getElementById('game-area').style.display = 'none';
+  document.getElementById('doneScreen').style.display = 'block';
+  const total = okCount + wrongCount;
+  const pct = total > 0 ? Math.round(okCount / total * 100) : 0;
+  document.getElementById('doneScore').textContent = pct + '%';
+  const msgs = [
+    [80, "Excellent ! Tu maîtrises bien ce vocabulaire."],
+    [50, "Bien ! Encore quelques révisions et ce sera parfait."],
+    [0,  "Continue à t'entraîner, tu vas y arriver !"]
+  ];
+  document.getElementById('doneMsg').textContent = (msgs.find(m => pct >= m[0]) || msgs[2])[1];
+}
+
+function updateStats() {
+  const total = okCount + wrongCount;
+  document.getElementById('s-total').textContent = deck.length;
+  document.getElementById('s-ok').textContent = okCount;
+  document.getElementById('s-wrong').textContent = wrongCount;
+  document.getElementById('s-pct').textContent = total > 0 ? Math.round(okCount/total*100) + '%' : '—';
+}
+
+function updateProgress() {
+  const pct = deck.length > 0 ? Math.round(current / deck.length * 100) : 0;
+  document.getElementById('prog').style.width = pct + '%';
+}
+
+// ── ADD VOCAB ──
+function addWord() {
+  const nl = document.getElementById('inp-nl').value.trim();
+  const fr = document.getElementById('inp-fr').value.trim();
+  const t  = document.getElementById('inp-theme').value;
+  const err = document.getElementById('add-error');
+  if (!nl || !fr) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  customVocab.push({nl, fr, t});
+  saveCustom();
+  document.getElementById('inp-nl').value = '';
+  document.getElementById('inp-fr').value = '';
+  document.getElementById('inp-nl').focus();
+  renderCustomList();
+}
+
+function deleteWord(i) {
+  customVocab.splice(i, 1);
+  saveCustom();
+  renderCustomList();
+}
+
+function clearCustom() {
+  if (!confirm('Supprimer tous tes ajouts ?')) return;
+  customVocab = []; saveCustom(); renderCustomList();
+}
+
+function renderCustomList() {
+  const el = document.getElementById('customList');
+  if (!customVocab.length) { el.innerHTML = '<p class="no-custom">Aucun mot ajouté pour l\'instant.</p>'; return; }
+  el.innerHTML = customVocab.map((v,i) => `
+    <div class="add-item">
+      <div class="add-item-words">
+        <span class="add-item-nl">${esc(v.nl)}</span>
+        <span class="add-item-fr">${esc(v.fr)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="add-item-tag">${THEMES[v.t]||v.t}</span>
+        <button class="btn-del" onclick="deleteWord(${i})" title="Supprimer">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── VOCAB LIST ──
+function renderList() {
+  const el = document.getElementById('vlist-container');
+  const order = ['winkelen','uitstap','reis','mobiliteit','custom'];
+  const groups = {};
+  allVocab().forEach(v => { if (!groups[v.t]) groups[v.t] = []; groups[v.t].push(v); });
+  el.innerHTML = order.filter(t => groups[t]?.length).map(t => `
+    <div class="vlist-theme">
+      <div class="vlist-theme-title">${THEMES[t]} <span style="font-size:11px;font-weight:400;color:var(--muted)">(${groups[t].length} mots)</span></div>
+      ${groups[t].map(v => `
+        <div class="vlist-row">
+          <div class="vlist-cell">${esc(v.nl)}</div>
+          <div class="vlist-cell">${esc(v.fr)}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// ── EXPORT ──
+function exportSite() {
+  const src = document.documentElement.outerHTML;
+  const marker = '// CUSTOM_VOCAB_PLACEHOLDER';
+  const inject = `let customVocab = ${JSON.stringify(customVocab)};`;
+  const out = src.replace(/let customVocab = JSON\.parse\(localStorage\.getItem\('nl_custom'\) \|\| '\[\]'\);/, inject);
+  const blob = new Blob([out], {type: 'text/html'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'flashcards_neerlandais_export.html'; a.click();
+}
+
+// ── HELPERS ──
+function shuffle(a) {
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  const tab = document.getElementById('tab-flash');
+  if (tab.style.display === 'none') return;
+  if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); flipCard(); }
+  if (e.key === 'ArrowRight') { if (isFlipped) answer(true); }
+  if (e.key === 'ArrowLeft')  { if (isFlipped) answer(false); }
+});
+
+// ── JSONBIN SYNC ──
+const JSONBIN_MASTER_KEY = '$2a$10$BWQQHFCR10gemvJzBgAeKu8oam43JZZb6aLhG/NtqwnI4H8ztruB2';
+const JSONBIN_ACCESS_KEY = '$2a$10$bk6yf5EzuEqkp5pDQNMgJ.FCxRLRvLVwtyNWZZ7XDlDEkkF4QCjSe';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+// Bin fixe qui sert d'annuaire : pseudo → binId
+// Créé une seule fois, son ID est hardcodé ici après la première exécution
+let INDEX_BIN_ID = localStorage.getItem('nl_index_bin_id') || null;
+let currentUser = null;
+let currentBinId = null;
+
+async function getOrCreateIndexBin() {
+  if (INDEX_BIN_ID) return INDEX_BIN_ID;
+  // Créer le bin annuaire
+  const res = await fetch(`${JSONBIN_BASE}/b`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_MASTER_KEY,
+      'X-Bin-Name': 'nl_index',
+      'X-Bin-Private': 'true'
+    },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error('Impossible de créer l\'annuaire');
+  const data = await res.json();
+  INDEX_BIN_ID = data.metadata.id;
+  localStorage.setItem('nl_index_bin_id', INDEX_BIN_ID);
+  return INDEX_BIN_ID;
+}
+
+async function readIndex() {
+  const id = await getOrCreateIndexBin();
+  const res = await fetch(`${JSONBIN_BASE}/b/${id}/latest`, {
+    headers: {
+      'X-Master-Key': JSONBIN_MASTER_KEY,
+      'X-Access-Key': JSONBIN_ACCESS_KEY
+    }
+  });
+  if (!res.ok) throw new Error('Lecture annuaire échouée');
+  const data = await res.json();
+  return data.record || {};
+}
+
+async function writeIndex(index) {
+  const id = await getOrCreateIndexBin();
+  const res = await fetch(`${JSONBIN_BASE}/b/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_MASTER_KEY
+    },
+    body: JSON.stringify(index)
+  });
+  if (!res.ok) throw new Error('Écriture annuaire échouée');
+}
+
+async function findOrCreateBin(userKey) {
+  const index = await readIndex();
+  if (index[userKey]) return index[userKey];
+
+  // Nouveau pseudo → créer un bin pour lui
+  const res = await fetch(`${JSONBIN_BASE}/b`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_MASTER_KEY,
+      'X-Bin-Name': 'nl_' + userKey,
+      'X-Bin-Private': 'true'
+    },
+    body: JSON.stringify({ vocab: [] })
+  });
+  if (!res.ok) throw new Error('Création bin échouée');
+  const data = await res.json();
+  const binId = data.metadata.id;
+
+  // Enregistrer dans l'annuaire
+  index[userKey] = binId;
+  await writeIndex(index);
+  return binId;
+}
+
+async function doLogin() {
+  const key = document.getElementById('loginKey').value.trim().toLowerCase();
+  if (!key || key.length < 2) return;
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  const btn = document.querySelector('.login-btn');
+  btn.textContent = 'Connexion…'; btn.disabled = true;
+
+  try {
+    const binId = await findOrCreateBin(key);
+    currentUser = key;
+    currentBinId = binId;
+    localStorage.setItem('nl_session', JSON.stringify({ user: key, binId }));
+    await syncPull(true);
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('syncUser').textContent = '🔑 ' + key;
+    setSyncStatus('Connecté');
+  } catch(e) {
+    err.style.display = 'block';
+    console.error(e);
+  }
+  btn.textContent = 'Accéder →'; btn.disabled = false;
+}
+
+async function syncPush() {
+  if (!currentBinId) return;
+  setSyncStatus('Sauvegarde…');
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b/${currentBinId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_MASTER_KEY
+      },
+      body: JSON.stringify({ vocab: customVocab })
+    });
+    if (!res.ok) throw new Error();
+    setSyncStatus('Sauvegardé ✓ · ' + now());
+    showToast('✓ Mots sauvegardés !');
+  } catch(e) {
+    setSyncStatus('Erreur de sauvegarde');
+    showToast('Erreur de sauvegarde', true);
+  }
+}
+
+async function syncPull(silent = false) {
+  if (!currentBinId) return;
+  setSyncStatus('Récupération…');
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b/${currentBinId}/latest`, {
+      headers: {
+        'X-Master-Key': JSONBIN_MASTER_KEY,
+        'X-Access-Key': JSONBIN_ACCESS_KEY
+      }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const remote = data.record?.vocab || [];
+    customVocab = remote;
+    saveCustom();
+    renderCustomList();
+    setSyncStatus('Synchronisé ✓ · ' + now());
+    if (!silent) showToast(`✓ ${remote.length} mot${remote.length !== 1 ? 's' : ''} récupéré${remote.length !== 1 ? 's' : ''}`);
+  } catch(e) {
+    setSyncStatus('Erreur de récupération');
+    if (!silent) showToast('Erreur de connexion', true);
+  }
+}
+
+function doLogout() {
+  currentUser = null; currentBinId = null;
+  localStorage.removeItem('nl_session');
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('loginKey').value = '';
+}
+
+function setSyncStatus(msg) {
+  document.getElementById('syncStatus').textContent = msg;
+}
+
+function now() {
+  return new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
+}
+
+function showToast(msg, isErr = false) {
+  const t = document.getElementById('importToast');
+  t.textContent = msg;
+  t.className = 'import-toast' + (isErr ? ' toast-err' : '');
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── INIT ──
+resetSession();
+
+// Restaurer session si déjà connecté
+const savedSession = JSON.parse(localStorage.getItem('nl_session') || 'null');
+if (savedSession) {
+  currentUser = savedSession.user;
+  currentBinId = savedSession.binId;
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('syncUser').textContent = '🔑 ' + currentUser;
+  syncPull(true);
+}
+</script>
+</body>
+</html>
