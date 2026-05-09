@@ -855,7 +855,6 @@ async function getOrCreateIndexBin() {
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Key': JSONBIN_MASTER_KEY,
-      'X-Bin-Name': 'nl_index',
       'X-Bin-Private': 'true'
     },
     body: JSON.stringify({})
@@ -903,7 +902,6 @@ async function findOrCreateBin(userKey) {
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Key': JSONBIN_MASTER_KEY,
-      'X-Bin-Name': 'nl_' + userKey,
       'X-Bin-Private': 'true'
     },
     body: JSON.stringify({ vocab: [] })
